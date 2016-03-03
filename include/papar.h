@@ -97,9 +97,8 @@ typedef struct papar_tokenlist {
   const char *error_start;
   const char *error_end;
 
-
   const char *src;
-
+  
   size_t capacity;
   size_t size;
 } papar_tokenlist;

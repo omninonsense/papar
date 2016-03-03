@@ -64,7 +64,7 @@ int papar_tokenlist_push(papar_tokenlist *self, papar_token token)
   if (self->size >= self->capacity) {
     size_t amount = self->capacity * PAPAR_TOKENLIST_GRWOTH_RATE;
     if (papar__tokenlist_grow(self, amount)) {
-      self->error_type = PAPAR_ERR_TOK;
+      self->error_type = PAPAR_ERR_MEM;
       return 1;
     }
   }
