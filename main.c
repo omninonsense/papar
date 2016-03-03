@@ -10,12 +10,13 @@ int main(int argc, char const *argv[])
   papar_tokenlist *tokenlist = papar_tokenlist_new(0);
   papar_lex(argv[1], tokenlist);
 
-  if (tokenlist->has_error) {
-    if (tokenlist->error_offset < 0) {
+  if (tokenlist->error_type) {
+    if (tokenlist->error_type == PAPAR_ERR_MEM) {
       fprintf(stderr, "Papar ran out of memory during lexing\n");
       return 3;
     }
-    fprintf(stderr, "Encountered error while tokenizing, couldn't process token `%.*s` at offset %zd\n", (int)(tokenlist->error_end - tokenlist->error_start), tokenlist->error_start, tokenlist->error_offset);
+
+    fprintf(stderr, "Encountered error while tokenizing, couldn't process token `%.*s` at offset %zd\n", (int)(tokenlist->error_end - tokenlist->error_start), tokenlist->error_start, tokenlist->error_start - tokenlist->src);
     return 2;
   }
 

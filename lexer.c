@@ -1,4 +1,5 @@
 #include "papar.h"
+#include <stdio.h>
 
 const char *const papar_token_type_lookup[] = {
   "PAPAR_TOK_UNDEF",
@@ -21,7 +22,7 @@ papar_token papar_token_new(const char* start, size_t length, enum papar_token_t
   return token;
 }
 
-papar_tokenlist *papar_tokenlist_new(unsigned int initial_capacity)
+papar_tokenlist *papar_tokenlist_new(size_t initial_capacity)
 {
 
   if (initial_capacity < 10)
@@ -29,12 +30,12 @@ papar_tokenlist *papar_tokenlist_new(unsigned int initial_capacity)
 
   papar_tokenlist *self = (papar_tokenlist*) malloc(sizeof(papar_tokenlist));
 
-  self->has_error = false;
+  self->error_type = PAPAR_ERR_OK;
   self->error_start = NULL;
   self->error_end = NULL;
-  self->error_offset = 0;
 
-  self->position = 0;
+  self->src = NULL;
+
   self->size = 0;
   self->capacity = initial_capacity;
 
@@ -63,8 +64,7 @@ int papar_tokenlist_push(papar_tokenlist *self, papar_token token)
   if (self->size >= self->capacity) {
     size_t amount = self->capacity * PAPAR_TOKENLIST_GRWOTH_RATE;
     if (papar__tokenlist_grow(self, amount)) {
-      self->has_error = true;
-      self->error_offset = -1;
+      self->error_type = PAPAR_ERR_TOK;
       return 1;
     }
   }
@@ -96,6 +96,7 @@ int papar__tokenlist_grow(papar_tokenlist *self, size_t amount)
 
 void papar_lex(const char *d, papar_tokenlist *tokenlist) {
   const char *c = d;
+  tokenlist->src = d;
 
   do {
     if (*c == 0) {
@@ -112,16 +113,12 @@ void papar_lex(const char *d, papar_tokenlist *tokenlist) {
     else if (*c == ',')
       c = papar__lexer_consume_comma(c, tokenlist);
     else {
-      tokenlist->has_error = true;
+      tokenlist->error_type = PAPAR_ERR_TOK;
       tokenlist->error_start = c;
       tokenlist->error_end = c+1;
     }
 
-    if (tokenlist->has_error) {
-      if (tokenlist->error_offset < 0) // Not enough memory.
-        return;
-
-      tokenlist->error_offset = c - d + 1;
+    if (tokenlist->error_type) {
       break;
     }
   } while(true);
@@ -159,20 +156,15 @@ const char *papar__lexer_consume_number(const char *c, papar_tokenlist *tokenlis
 {
   const char *n = c;
   uint8_t flags = 0;
-  do {
-    if (*n == '-' || *n == '+') {
-      if (n == c) {
-        ++n;
-        continue;
-      } else goto papar_err_jump;
-    }
 
+  if (*n == '-' || *n == '+')
+    ++n;
+
+  do {
     if (isdigit(*n)) {
       ++n;
       continue;
-    }
-
-    if (*n == '.') {
+    } else if (*n == '.') {
       if (flags & PAPAR_NUM_HAS_DOT || flags & PAPAR_NUM_HAS_E) {
         goto papar_err_jump;
       } else {
@@ -183,9 +175,7 @@ const char *papar__lexer_consume_number(const char *c, papar_tokenlist *tokenlis
 
         continue;
       }
-    }
-
-    if (*n == 'e' || *n == 'E') {
+    } else if (*n == 'e' || *n == 'E') {
       if (flags & PAPAR_NUM_HAS_E)
         goto papar_err_jump;
       else {
@@ -193,24 +183,23 @@ const char *papar__lexer_consume_number(const char *c, papar_tokenlist *tokenlis
         ++n;
 
         if (isdigit(*n)) continue;
-
-        if (*n == '-' || *n == '+') {
+        else if (*n == '-' || *n == '+') {
           ++n;
           if (!isdigit(*n)) goto papar_err_jump;
-        }
-
-        continue;
+          continue;
+        } else goto papar_err_jump;
       }
-    }
+    } else if (papar__isws(*n) || *n == ',' || *n == 0) // Stop reading number on next token or end of stream
+      break;
+    else goto papar_err_jump;
 
-    break;
   } while(true);
 
   papar_tokenlist_push(tokenlist, papar_token_new(c, n - c, PAPAR_TOK_NUMBER));
   return n;
 
   papar_err_jump:
-    tokenlist->has_error = true;
+    tokenlist->error_type = PAPAR_ERR_TOK;
     tokenlist->error_start = c;
     tokenlist->error_end = n+1;
     return n;

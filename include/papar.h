@@ -29,6 +29,13 @@ enum papar_token_type {
   PAPAR_TOK_LAST // For custom lexing
 };
 
+enum papar_error_types {
+  PAPAR_ERR_OK = 0,
+  PAPAR_ERR_TOK,
+  PAPAR_ERR_PAR,
+  PAPAR_ERR_MEM
+};
+
 extern const char *const papar_token_type_lookup[];
 
 enum papar_command_type {
@@ -86,22 +93,53 @@ typedef struct papar_token {
 typedef struct papar_tokenlist {
   papar_token *tokens;
 
-  bool has_error;
+  enum papar_error_types error_type;
   const char *error_start;
   const char *error_end;
-  ssize_t error_offset;
 
-  size_t position;
+
+  const char *src;
+
   size_t capacity;
   size_t size;
 } papar_tokenlist;
 
+typedef struct papar_command {
+  enum papar_command_type type;
+                 // Alternate usage in Arc commands:
+  double x,  y;  // x, y
+  double x1, y1; // rx, ry
+  double x2, y2; // x-axis-rotation, [unused]
+  uint8_t flags; // large-arc-flag and sweep-flag
+} papar_command;
+
+typedef struct papar_state {
+  papar_command *commands;
+  const papar_tokenlist *tokenlist;
+
+  size_t position;
+  size_t size;
+  size_t capacity;
+
+  bool needs_more;
+} papar_state;
 
 void papar_lex(const char *d, papar_tokenlist *tokenlist);
+void papar_parse(papar_tokenlist *tokenlist, papar_state *state);
+
+papar_command papar_command_new(enum papar_command_type type);
+
+papar_state *papar_state_new(size_t initial_capacity);
+
+void papar__parser_expect_cmd(papar_tokenlist *tl, char *c);
+void papar__parser_expect_flag(papar_tokenlist *tl, bool *f);
+void papar__parser_expect_point(papar_tokenlist *tl, double *x, double *y);
+
+void papar__parser_parse_cmd(papar_state* self, enum papar_command_type type);
 
 papar_token papar_token_new(const char* start, size_t length, enum papar_token_type type);
 
-papar_tokenlist *papar_tokenlist_new(unsigned int initial_capacity);
+papar_tokenlist *papar_tokenlist_new(size_t initial_capacity);
 void papar_tokenlist_free(papar_tokenlist *self);
 int papar_tokenlist_push(papar_tokenlist *self, papar_token token);
 papar_token *papar_tokenlist_pop(papar_tokenlist *self);
