@@ -8,6 +8,7 @@ int main(int argc, char const *argv[])
     return 1;
 
   papar_tokenlist *tokenlist = papar_tokenlist_new(0);
+  papar_state *state = papar_state_new(0);
   papar_lex(argv[1], tokenlist);
 
   if (tokenlist->error_type) {
@@ -24,6 +25,8 @@ int main(int argc, char const *argv[])
     printf("%s(\"%.*s\")\n", papar_token_type_lookup[tokenlist->tokens[i].type], (int)(tokenlist->tokens[i].length), tokenlist->tokens[i].start);
   }
 
+  papar_parse(tokenlist, state);
+  papar_state_free(state);
   papar_tokenlist_free(tokenlist);
   return 0;
 }

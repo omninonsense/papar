@@ -4,6 +4,7 @@ BUILD_DIR=./build
 
 build: prepare
 	$(CC) $(CCFLAGS) -I./include -c lexer.c -o $(BUILD_DIR)/lexer.o
+	$(CC) $(CCFLAGS) -I./include -c parser.c -o $(BUILD_DIR)/parser.o
 	$(CC) $(CCFLAGS) -I./include main.c $(BUILD_DIR)/*.o -o $(BUILD_DIR)/papar
 
 prepare:

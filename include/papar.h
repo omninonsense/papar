@@ -15,6 +15,14 @@
 #define PAPAR_TOKENLIST_MIN_CAP 20
 #endif
 
+#ifndef PAPAR_STATECMD_MIN_CAP
+#define PAPAR_STATECMD_MIN_CAP 10
+#endif
+
+#ifndef PAPAR_STATECMD_GRWOTH_RATE
+#define PAPAR_STATECMD_GRWOTH_RATE 0.3
+#endif
+
 #ifndef PAPAR_TOKENLIST_GRWOTH_RATE
 #define PAPAR_TOKENLIST_GRWOTH_RATE 0.3
 #endif
@@ -38,52 +46,6 @@ enum papar_error_types {
 
 extern const char *const papar_token_type_lookup[];
 
-enum papar_command_type {
-  // *
-  PAPAR_CMD_UNKNOWN = 0,
-
-  // M, m
-  PAPAR_CMD_MOVETO_ABSOLUTE,
-  PAPAR_CMD_MOVETO_RELATIVE,
-
-  // Z, z
-  PAPAR_CMD_CLOSEPATH,
-
-  // L, l
-  PAPAR_CMD_LINETO_ABSOLUTE,
-  PAPAR_CMD_LINETO_RELATIVE,
-
-  // H, h
-  PAPAR_CMD_LINETOHORIZONTAL_ABSOLUTE,
-  PAPAR_CMD_LINETOHORIZONTAL_RELATIVE,
-
-  // V, v
-  PAPAR_CMD_LINETOVERTICAL_ABSOLUTE,
-  PAPAR_CMD_LINETOVERTICAL_RELATIVE,
-
-  // C, c
-  PAPAR_CMD_3CURVETO_ABSOLUTE,
-  PAPAR_CMD_3CURVETO_RELATIVE,
-
-  // S, s
-  PAPAR_CMD_3CURVETOSMOOTH_ABSOLUTE,
-  PAPAR_CMD_3CURVETOSMOOTH_RELATIVE,
-
-  // Q, q
-  PAPAR_CMD_2CURVETO_ABSOLUTE,
-  PAPAR_CMD_2CURVETO_RELATIVE,
-
-  // T, t
-  PAPAR_CMD_2CURVETOSMOOTH_ABSOLUTE,
-  PAPAR_CMD_2CURVETOSMOOTH_RELATIVE,
-
-  // A, a
-  PAPAR_CMD_ELLIPTICALARC_ABSOLUTE,
-  PAPAR_CMD_ELLIPTICALARC_RELATIVE,
-
-  PAPAR_CMD_LAST
-};
-
 typedef struct papar_token {
   const char *start;
   size_t length;
@@ -98,43 +60,46 @@ typedef struct papar_tokenlist {
   const char *error_end;
 
   const char *src;
-  
+
   size_t capacity;
   size_t size;
 } papar_tokenlist;
 
 typedef struct papar_command {
-  enum papar_command_type type;
+  char type;
                  // Alternate usage in Arc commands:
   double x,  y;  // x, y
   double x1, y1; // rx, ry
   double x2, y2; // x-axis-rotation, [unused]
-  uint8_t flags; // large-arc-flag and sweep-flag
+  uint8_t flags;
 } papar_command;
 
 typedef struct papar_state {
   papar_command *commands;
   const papar_tokenlist *tokenlist;
 
+  enum papar_error_types error_type;
+
   size_t position;
   size_t size;
   size_t capacity;
-
-  bool needs_more;
 } papar_state;
 
 void papar_lex(const char *d, papar_tokenlist *tokenlist);
-void papar_parse(papar_tokenlist *tokenlist, papar_state *state);
-
-papar_command papar_command_new(enum papar_command_type type);
+void papar_parse(const papar_tokenlist *tokenlist, papar_state *state);
 
 papar_state *papar_state_new(size_t initial_capacity);
+void papar_state_free(papar_state *self);
+int papar_state_push(papar_state *self, papar_command command);
+papar_command *papar_state_pop(papar_state *self);
+
+int papar__state_grow(papar_state *self, size_t amount);
 
 void papar__parser_expect_cmd(papar_tokenlist *tl, char *c);
 void papar__parser_expect_flag(papar_tokenlist *tl, bool *f);
 void papar__parser_expect_point(papar_tokenlist *tl, double *x, double *y);
 
-void papar__parser_parse_cmd(papar_state* self, enum papar_command_type type);
+void papar__parser_parse_cmd(papar_state *self, papar_tokenlist *tl, char c);
 
 papar_token papar_token_new(const char* start, size_t length, enum papar_token_type type);
 

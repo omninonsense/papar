@@ -1,5 +1,4 @@
 #include "papar.h"
-#include <stdio.h>
 
 const char *const papar_token_type_lookup[] = {
   "PAPAR_TOK_UNDEF",
