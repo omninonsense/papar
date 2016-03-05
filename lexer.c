@@ -165,18 +165,18 @@ const char *papar__lexer_consume_number(const char *c, papar_tokenlist *tokenlis
       continue;
     } else if (*n == '.') {
       if (flags & PAPAR_NUM_HAS_DOT || flags & PAPAR_NUM_HAS_E) {
-        goto papar_err_jump;
+        goto papar_lexnumerr_jump;
       } else {
         flags |= PAPAR_NUM_HAS_DOT;
         ++n;
 
-        if (!isdigit(*n)) goto papar_err_jump;
+        if (!isdigit(*n)) goto papar_lexnumerr_jump;
 
         continue;
       }
     } else if (*n == 'e' || *n == 'E') {
       if (flags & PAPAR_NUM_HAS_E)
-        goto papar_err_jump;
+        goto papar_lexnumerr_jump;
       else {
         flags |= PAPAR_NUM_HAS_E;
         ++n;
@@ -184,20 +184,20 @@ const char *papar__lexer_consume_number(const char *c, papar_tokenlist *tokenlis
         if (isdigit(*n)) continue;
         else if (*n == '-' || *n == '+') {
           ++n;
-          if (!isdigit(*n)) goto papar_err_jump;
+          if (!isdigit(*n)) goto papar_lexnumerr_jump;
           continue;
-        } else goto papar_err_jump;
+        } else goto papar_lexnumerr_jump;
       }
     } else if (papar__isws(*n) || *n == ',' || *n == 0) // Stop reading number on next token or end of stream
       break;
-    else goto papar_err_jump;
+    else goto papar_lexnumerr_jump;
 
   } while(true);
 
   papar_tokenlist_push(tokenlist, papar_token_new(c, n - c, PAPAR_TOK_NUMBER));
   return n;
 
-  papar_err_jump:
+  papar_lexnumerr_jump:
     tokenlist->error_type = PAPAR_ERR_TOK;
     tokenlist->error_start = c;
     tokenlist->error_end = n+1;
