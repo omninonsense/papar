@@ -1,13 +1,6 @@
 #ifndef __PAPAR__H
 #define __PAPAR__H
 
-#include <stdbool.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <inttypes.h>
-#include <ctype.h>
-
-
 #define PAPAR_NUM_HAS_DOT       0x01
 #define PAPAR_NUM_HAS_E         0x02
 
@@ -23,18 +16,93 @@
 #define PAPAR_STATECMD_GRWOTH_RATE 0.3
 #endif
 
+#ifndef PAPAR_REPORT_ERRORS
+#define PAPAR_REPORT_ERRORS 1
+#endif
+
 #ifndef PAPAR_TOKENLIST_GRWOTH_RATE
 #define PAPAR_TOKENLIST_GRWOTH_RATE 0.3
 #endif
+
+#if PAPAR_DEBUGGING
+  #ifndef PAPAR_PRINT_DEBUG
+  #define PAPAR_PRINT_DEBUG 1
+  #endif
+#else
+  #ifndef PAPAR_PRINT_DEBUG
+  #define PAPAR_PRINT_DEBUG 0
+  #endif
+#endif
+
+#if PAPAR_DEBUGGING
+  #define D(x) do { x } while(0)
+#else
+  #define D(x) do {   } while(0)
+#endif
+
+#ifndef PAPAR_PRINT_WARN
+#define PAPAR_PRINT_WARN  1
+#endif
+
+#ifndef PAPAR_PRINT_ERROR
+#define PAPAR_PRINT_ERROR 1
+#endif
+
+#define PAPAR_TOK(tl, s, offs) (tl->tokens[s->position+offs])
+#define PAPAR_TOK_BEG(tl, s, offs) (tl->tokens[s->position+offs].start)
+#define PAPAR_TOK_LEN(tl, s, offs) (tl->tokens[s->position+offs].length)
+#define PAPAR_TOK_END(tl, s, offs) (tl->tokens[s->position+offs].start + PAPAR_TOK_LEN(tl, s, offs))
+#define PAPAR_TOK_TYPE(tl, s, offs) (tl->tokens[s->position+offs].type)
+
+#define PAPAR_DEBUG(fmt, ...)                                                                      \
+  do {                                                                                             \
+    if (PAPAR_PRINT_DEBUG)                                                                         \
+      fprintf(stderr, "[DEBUG] %s:%d:%s(): " fmt "\n", __FILE__, __LINE__, __func__, __VA_ARGS__); \
+  } while (0)
+
+#define PAPAR_WARN(fmt, ...)                                                                       \
+  do {                                                                                             \
+    if (PAPAR_PRINT_WARN)                                                                          \
+      fprintf(stderr, "[WARN ] " fmt "\n", __VA_ARGS__);                                           \
+  } while (0)
+
+#define PAPAR_ERROR(fmt, ...)                                                                      \
+  do {                                                                                             \
+    if (PAPAR_PRINT_ERROR)                                                                         \
+      fprintf(stderr, "[ERROR] " fmt "\n", __VA_ARGS__);                                           \
+  } while (0)
+
+#if PAPAR_PRINT_DEBUG || PAPAR_PRINT_WARN || PAPAR_PRINT_ERROR
+#include <stdio.h>
+#endif
+
+#include <stdbool.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdarg.h>
+#include <string.h>
+#include <inttypes.h>
+#include <ctype.h>
+
+#define PAPAR_LARGE_ARC_FLAG  0x1
+#define PAPAR_SWEEP_FLAG      0x2
 
 enum papar_token_type {
   PAPAR_TOK_UNDEF = 0,
   PAPAR_TOK_COMMAND,
   PAPAR_TOK_NUMBER,
   PAPAR_TOK_COMMA,
+  PAPAR_TOK_FLAG, // Used by parser, but not by lexer
   PAPAR_TOK_WHITESPACE, // Unused, but reserved
   PAPAR_TOK_EOF,
-  PAPAR_TOK_LAST // For custom lexing
+  PAPAR_TOK_LAST
+};
+
+static const char *const papar_token_type_lookup[] = {
+  "PAPAR_TOK_UNDEF", "PAPAR_TOK_COMMAND",
+  "PAPAR_TOK_NUMBER", "PAPAR_TOK_COMMA",
+  "PAPAR_TOK_FLAG", "PAPAR_TOK_WHITESPACE",
+  "PAPAR_TOK_EOF", "PAPAR_TOK_LAST"
 };
 
 enum papar_error_types {
@@ -80,6 +148,8 @@ typedef struct papar_state {
 
   enum papar_error_types error_type;
 
+  char last_command;
+
   size_t position;
   size_t size;
   size_t capacity;
@@ -95,11 +165,24 @@ papar_command *papar_state_pop(papar_state *self);
 
 int papar__state_grow(papar_state *self, size_t amount);
 
-void papar__parser_expect_cmd(papar_tokenlist *tl, char *c);
-void papar__parser_expect_flag(papar_tokenlist *tl, bool *f);
-void papar__parser_expect_point(papar_tokenlist *tl, double *x, double *y);
+enum papar_token_type papar__parser_peek(const papar_tokenlist *tl, papar_state *s, ssize_t offset);
+int papar__parser_expect(const papar_tokenlist *tl, papar_state *s, ssize_t offset, size_t count, ...);
 
-void papar__parser_parse_cmd(papar_state *self, papar_tokenlist *tl, char c);
+bool papar__parser_consume_flag(const papar_tokenlist *tl, papar_state *s);
+void papar__parser_consume_point(const papar_tokenlist *tl, papar_state *s, double *x, double *y);
+double papar__parser_consume_number(const papar_tokenlist *tl, papar_state *s);
+
+void papar__parser_parse_command(const papar_tokenlist *tl, papar_state *s, char c);
+void papar__parser_parse_goto(const papar_tokenlist *tl, papar_state *s);
+void papar__parser_parse_closepath(const papar_tokenlist *tl, papar_state *s);
+void papar__parser_parse_lineto(const papar_tokenlist *tl, papar_state *s);
+void papar__parser_parse_horizontallineto(const papar_tokenlist *tl, papar_state *s);
+void papar__parser_parse_verticallineto(const papar_tokenlist *tl, papar_state *s);
+void papar__parser_parse_3bezierto(const papar_tokenlist *tl, papar_state *s);
+void papar__parser_parse_smooth3bezierto(const papar_tokenlist *tl, papar_state *s);
+void papar__parser_parse_2bezierto(const papar_tokenlist *tl, papar_state *s);
+void papar__parser_parse_smooth2bezierto(const papar_tokenlist *tl, papar_state *s);
+void papar__parser_parse_ellipticalarc(const papar_tokenlist *tl, papar_state *s);
 
 papar_token papar_token_new(const char* start, size_t length, enum papar_token_type type);
 
