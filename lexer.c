@@ -1,15 +1,5 @@
 #include "papar.h"
 
-const char *const papar_token_type_lookup[] = {
-  "PAPAR_TOK_UNDEF",
-  "PAPAR_TOK_COMMAND",
-  "PAPAR_TOK_NUMBER",
-  "PAPAR_TOK_COMMA",
-  "PAPAR_TOK_WHITESPACE",
-  "PAPAR_TOK_EOF",
-  "PAPAR_TOK_LAST"
-};
-
 papar_token papar_token_new(const char* start, size_t length, enum papar_token_type type)
 {
   papar_token token;
@@ -23,7 +13,6 @@ papar_token papar_token_new(const char* start, size_t length, enum papar_token_t
 
 papar_tokenlist *papar_tokenlist_new(size_t initial_capacity)
 {
-
   if (initial_capacity < 10)
     initial_capacity = 10;
 
@@ -116,11 +105,7 @@ void papar_lex(const char *d, papar_tokenlist *tokenlist) {
       tokenlist->error_start = c;
       tokenlist->error_end = c+1;
     }
-
-    if (tokenlist->error_type) {
-      break;
-    }
-  } while(true);
+  } while(!tokenlist->error_type);
 }
 
 bool papar__isws(char c)
@@ -158,6 +143,8 @@ const char *papar__lexer_consume_number(const char *c, papar_tokenlist *tokenlis
 
   if (*n == '-' || *n == '+')
     ++n;
+
+  if (!isdigit(*n)) goto papar_lexnumerr_jump;
 
   do {
     if (isdigit(*n)) {
