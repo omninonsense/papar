@@ -186,7 +186,8 @@ void papar__parser_parse_command(const papar_tokenlist *tl, papar_state *s, char
     break;
 
     default:
-      PAPAR_ERROR("Unknown command: %c", c);
+      PAPAR_ERROR("Unknown command: %c at position %zd", c, PAPAR_TOK_BEG(tl, s, 0) - tl->src);
+      s->error_type = PAPAR_ERR_PAR;
     break;
   }
 }
