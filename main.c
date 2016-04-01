@@ -48,23 +48,44 @@ int main(int argc, char const *argv[])
 
   for (size_t i = 0; i < state->size; ++i) {
     PAPAR_DEBUG("%c("
-      "x: %.2f, "
-      "y: %.2f, "
-      "x1/rx: %.2f, "
-      "y1/ry: %.2f, "
-      "x2/x-axis-rotation: %.2f, "
-      "y2: %.2f, "
-      "flags: "BYTETOBINARYPATTERN
-    ")",
-    state->commands[i].type,
-    state->commands[i].x,
-    state->commands[i].y,
-    state->commands[i].x1,
-    state->commands[i].y1,
-    state->commands[i].x2,
-    state->commands[i].y2,
-    BYTETOBINARY(state->commands[i].flags)
-  );
+        "x: %.2f, "
+        "y: %.2f, "
+        "x1/rx: %.2f, "
+        "y1/ry: %.2f, "
+        "x2/x-axis-rotation: %.2f, "
+        "y2: %.2f, "
+        "flags: "BYTETOBINARYPATTERN
+      ")",
+      state->commands[i].type,
+      state->commands[i].x,
+      state->commands[i].y,
+      state->commands[i].x1,
+      state->commands[i].y1,
+      state->commands[i].x2,
+      state->commands[i].y2,
+      BYTETOBINARY(state->commands[i].flags)
+    );
+  }
+
+  // Previous point
+  double px = 0.0,
+         py = 0.0;
+
+  int    pw = 780,   ph = 638;    // Portview dimensions
+  double dw = 220.0, dh = 180.0;  // Document dimensions
+  double tx = 0.0,   ty = -414.6; // Translation vector
+
+  for (size_t i = 0; i < state->size; ++i) {
+    papar_command cmd = state->commands[i];
+    if (isupper(state->commands[i].type)) {
+      px = cmd.x;
+      py = cmd.y;
+    } else {
+      px += cmd.x;
+      py += cmd.y;
+    }
+
+    PAPAR_DEBUG("%f, %f", (px - tx) * dw/pw, (ph - py - ty) * dh/ph);
   }
 
   papar_tokenlist_free(tokenlist);
