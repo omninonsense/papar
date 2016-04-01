@@ -168,9 +168,9 @@ int papar__state_grow(papar_state *self, size_t amount);
 enum papar_token_type papar__parser_peek(const papar_tokenlist *tl, papar_state *s, ssize_t offset);
 int papar__parser_expect(const papar_tokenlist *tl, papar_state *s, ssize_t offset, size_t count, ...);
 
-bool papar__parser_consume_flag(const papar_tokenlist *tl, papar_state *s);
+void papar__parser_consume_number(const papar_tokenlist *tl, papar_state *s, double *number);
 void papar__parser_consume_point(const papar_tokenlist *tl, papar_state *s, double *x, double *y);
-double papar__parser_consume_number(const papar_tokenlist *tl, papar_state *s);
+void papar__parser_consume_flag(const papar_tokenlist *tl, papar_state *s, bool *flag);
 
 void papar__parser_parse_command(const papar_tokenlist *tl, papar_state *s, char c);
 void papar__parser_parse_goto(const papar_tokenlist *tl, papar_state *s);

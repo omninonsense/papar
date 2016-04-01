@@ -77,7 +77,7 @@ void papar_parse(const papar_tokenlist *tokenlist, papar_state *state)
   ++state->position;
   papar__parser_parse_command(tokenlist, state, cmd);
 
-  do {
+  while(!state->error_type) {
     enum papar_token_type ct = papar__parser_peek(tokenlist, state, 0);
     const char *ctname = papar_token_type_lookup[ct];
 
@@ -116,7 +116,7 @@ void papar_parse(const papar_tokenlist *tokenlist, papar_state *state)
     }
 
     ++state->position;
-  } while(!state->error_type);
+  }
 }
 
 void papar__parser_parse_command(const papar_tokenlist *tl, papar_state *s, char c)
@@ -264,7 +264,7 @@ void papar__parser_parse_horizontallineto(const papar_tokenlist *tl, papar_state
   papar_command cmd = {0};
   cmd.type = s->last_command;
 
-  cmd.x = papar__parser_consume_number(tl, s);
+  papar__parser_consume_number(tl, s, &cmd.x);
   papar_state_push(s, cmd);
 }
 
@@ -273,7 +273,7 @@ void papar__parser_parse_verticallineto(const papar_tokenlist *tl, papar_state *
   papar_command cmd = {0};
   cmd.type = s->last_command;
 
-  cmd.y = papar__parser_consume_number(tl, s);
+  papar__parser_consume_number(tl, s, &cmd.y);
   papar_state_push(s, cmd);
 }
 
@@ -320,44 +320,45 @@ void papar__parser_parse_smooth2bezierto(const papar_tokenlist *tl, papar_state 
 void papar__parser_parse_ellipticalarc(const papar_tokenlist *tl, papar_state *s)
 {
   papar_command cmd = {0};
+  bool large_arc = false, sweep = false;
   cmd.type = s->last_command;
 
   papar__parser_consume_point(tl, s, &cmd.x1, &cmd.y1); // rx, ry
-  cmd.x2 = papar__parser_consume_number(tl, s);         // x-axis-rotation
+  papar__parser_consume_number(tl, s, &cmd.x2);         // x-axis-rotation
 
-  if (papar__parser_consume_flag(tl, s)) cmd.flags |= PAPAR_LARGE_ARC_FLAG;
-  if (papar__parser_consume_flag(tl, s)) cmd.flags |= PAPAR_SWEEP_FLAG;
+  papar__parser_consume_flag(tl, s, &large_arc);
+  papar__parser_consume_flag(tl, s, &sweep);
+
+  if (large_arc) cmd.flags |= PAPAR_LARGE_ARC_FLAG;
+  if (sweep)     cmd.flags |= PAPAR_SWEEP_FLAG;
 
   papar__parser_consume_point(tl, s, &cmd.x, &cmd.y);
 
   papar_state_push(s, cmd);
 }
 
-double papar__parser_consume_number(const papar_tokenlist *tl, papar_state *s)
+void papar__parser_consume_number(const papar_tokenlist *tl, papar_state *s, double *number)
 {
-  double number;
+  if (papar__parser_expect(tl, s, 0, 1, PAPAR_TOK_NUMBER)) return;
 
-  papar__parser_expect(tl, s, 0, 1, PAPAR_TOK_NUMBER);
-  number = strtod(PAPAR_TOK_BEG(tl, s, 0), NULL);
+  *number = strtod(PAPAR_TOK_BEG(tl, s, 0), NULL);
+
   ++s->position;
-
-  return number;
 }
 
-bool papar__parser_consume_flag(const papar_tokenlist *tl, papar_state *s)
+void papar__parser_consume_flag(const papar_tokenlist *tl, papar_state *s, bool *flag)
 {
-  bool flag;
 
-  papar__parser_expect(tl, s, 0, 1, PAPAR_TOK_FLAG);
-  flag = (*PAPAR_TOK_BEG(tl, s, 0) == '1');
+  if (papar__parser_expect(tl, s, 0, 1, PAPAR_TOK_FLAG)) return;
+
+  *flag = (*PAPAR_TOK_BEG(tl, s, 0) == '1');
+
   ++s->position;
-
-  return flag;
 }
 
 void papar__parser_consume_point(const papar_tokenlist *tl, papar_state *s, double *x, double *y)
 {
-  papar__parser_expect(tl, s, 0, 3, PAPAR_TOK_NUMBER, PAPAR_TOK_COMMA, PAPAR_TOK_NUMBER);
+  if (papar__parser_expect(tl, s, 0, 3, PAPAR_TOK_NUMBER, PAPAR_TOK_COMMA, PAPAR_TOK_NUMBER)) return;
 
   //@IDEA: Maybe check how much characters strtod() consumed
   //       to double-check if the lexer read the number properly?
