@@ -156,8 +156,8 @@ typedef struct papar_state {
   size_t capacity;
 } papar_state;
 
-void papar_lex(papar_tokenlist *tokenlist, const char *d);
-void papar_parse(papar_state *state, const papar_tokenlist *tokenlist);
+void papar_lex(papar_tokenlist *self, const char *d);
+void papar_parse(papar_state *self, const papar_tokenlist *tokenlist);
 
 papar_state *papar_state_new(size_t initial_capacity);
 void papar_state_free(papar_state *self);
