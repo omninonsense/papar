@@ -52,7 +52,7 @@ int papar_tokenlist_push(papar_tokenlist *self, papar_token token)
   if (self->size >= self->capacity) {
     size_t amount = self->capacity * PAPAR_TOKENLIST_GRWOTH_RATE;
     if (papar__tokenlist_grow(self, amount)) {
-      PAPAR_ERROR("Could not allocate %zd memory for tokenlist.", self->capacity+amount);
+      PAPAR_ERROR("Could not allocate %zd memory for token list.", self->capacity+amount);
       self->error_type = PAPAR_ERR_MEM;
       return 1;
     }
@@ -83,30 +83,31 @@ int papar__tokenlist_grow(papar_tokenlist *self, size_t amount)
   return 0;
 }
 
-void papar_lex(papar_tokenlist *tokenlist, const char *d) {
+void papar_lex(papar_tokenlist *self, const char *d) {
   const char *c = d;
-  tokenlist->src = d;
+  self->src = d;
 
   do {
     if (*c == 0) {
-      papar_tokenlist_push(tokenlist, papar_token_new(c, 0, PAPAR_TOK_EOF));
+      papar_tokenlist_push(self, papar_token_new(c, 0, PAPAR_TOK_EOF));
       break;
     }
 
     if (papar__isws(*c))
-      c = papar__lexer_consume_whitespace(c, tokenlist);
+      c = papar__lexer_consume_whitespace(self, c);
     else if (isalpha(*c))
-      c = papar__lexer_consume_command(c, tokenlist);
+      c = papar__lexer_consume_command(self, c);
     else if (isdigit(*c) || *c == '-' || *c == '+')
-      c = papar__lexer_consume_number(c, tokenlist);
+      c = papar__lexer_consume_number(self, c);
     else if (*c == ',')
-      c = papar__lexer_consume_comma(c, tokenlist);
+      c = papar__lexer_consume_comma(self, c);
     else {
-      tokenlist->error_type = PAPAR_ERR_TOK;
-      tokenlist->error_start = c;
-      tokenlist->error_end = c+1;
+      PAPAR_ERROR("Encountered error while tokenizing, couldn't process token `%.*s` at offset %zd", (int)(self->error_end - self->error_start), self->error_start, self->error_start - self->src);
+      self->error_type = PAPAR_ERR_TOK;
+      self->error_start = c;
+      self->error_end = c+1;
     }
-  } while(!tokenlist->error_type);
+  } while(!self->error_type);
 }
 
 bool papar__isws(char c)
@@ -124,20 +125,20 @@ bool papar__isws(char c)
   }
 }
 
-const char *papar__lexer_consume_whitespace(const char *c, papar_tokenlist *tokenlist)
+const char *papar__lexer_consume_whitespace(papar_tokenlist *self, const char *c)
 {
   while (papar__isws(*c)) { c++; };
   return c;
 }
 
 
-const char *papar__lexer_consume_command(const char *c, papar_tokenlist *tokenlist)
+const char *papar__lexer_consume_command(papar_tokenlist *self, const char *c)
 {
-  papar_tokenlist_push(tokenlist, papar_token_new(c, 1, PAPAR_TOK_COMMAND));
+  papar_tokenlist_push(self, papar_token_new(c, 1, PAPAR_TOK_COMMAND));
   return ++c;
 }
 
-const char *papar__lexer_consume_number(const char *c, papar_tokenlist *tokenlist)
+const char *papar__lexer_consume_number(papar_tokenlist *self, const char *c)
 {
   const char *n = c;
   uint8_t flags = 0;
@@ -182,18 +183,18 @@ const char *papar__lexer_consume_number(const char *c, papar_tokenlist *tokenlis
 
   } while(true);
 
-  papar_tokenlist_push(tokenlist, papar_token_new(c, n - c, PAPAR_TOK_NUMBER));
+  papar_tokenlist_push(self, papar_token_new(c, n - c, PAPAR_TOK_NUMBER));
   return n;
 
   papar_lexnumerr_jump:
-    tokenlist->error_type = PAPAR_ERR_TOK;
-    tokenlist->error_start = c;
-    tokenlist->error_end = n+1;
+    self->error_type = PAPAR_ERR_TOK;
+    self->error_start = c;
+    self->error_end = n+1;
     return n;
 }
 
-const char *papar__lexer_consume_comma(const char *c, papar_tokenlist *tokenlist)
+const char *papar__lexer_consume_comma(papar_tokenlist *self, const char *c)
 {
-  papar_tokenlist_push(tokenlist, papar_token_new(c, 1, PAPAR_TOK_COMMA));
+  papar_tokenlist_push(self, papar_token_new(c, 1, PAPAR_TOK_COMMA));
   return ++c;
 }

@@ -194,9 +194,9 @@ papar_token *papar_tokenlist_pop(papar_tokenlist *self);
 
 int papar__tokenlist_grow(papar_tokenlist *self, size_t amount);
 bool papar__isws(char c);
-const char *papar__lexer_consume_whitespace(const char *c, papar_tokenlist *tokenlist);
-const char *papar__lexer_consume_command(const char *c, papar_tokenlist *tokenlist);
-const char *papar__lexer_consume_number(const char *c, papar_tokenlist *tokenlist);
-const char *papar__lexer_consume_comma(const char *c, papar_tokenlist *tokenlist);
+const char *papar__lexer_consume_whitespace(papar_tokenlist *tokenlist, const char *c);
+const char *papar__lexer_consume_command(papar_tokenlist *tokenlist, const char *c);
+const char *papar__lexer_consume_number(papar_tokenlist *tokenlist, const char *c);
+const char *papar__lexer_consume_comma(papar_tokenlist *tokenlist, const char *c);
 
 #endif
