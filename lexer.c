@@ -102,10 +102,10 @@ void papar_lex(papar_tokenlist *self, const char *d) {
     else if (*c == ',')
       c = papar__lexer_consume_comma(self, c);
     else {
-      PAPAR_ERROR("Encountered error while tokenizing, couldn't process token `%.*s` at offset %zd", (int)(self->error_end - self->error_start), self->error_start, self->error_start - self->src);
       self->error_type = PAPAR_ERR_TOK;
       self->error_start = c;
       self->error_end = c+1;
+      PAPAR_ERROR("Encountered error while tokenizing, couldn't process token `%.*s` at offset %zd", (int)(self->error_end - self->error_start), self->error_start, self->error_start - self->src);
     }
   } while(!self->error_type);
 }
