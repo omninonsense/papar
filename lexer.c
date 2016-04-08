@@ -52,6 +52,7 @@ int papar_tokenlist_push(papar_tokenlist *self, papar_token token)
   if (self->size >= self->capacity) {
     size_t amount = self->capacity * PAPAR_TOKENLIST_GRWOTH_RATE;
     if (papar__tokenlist_grow(self, amount)) {
+      PAPAR_ERROR("Could not allocate %zd memory for tokenlist.", self->capacity+amount);
       self->error_type = PAPAR_ERR_MEM;
       return 1;
     }
@@ -82,7 +83,7 @@ int papar__tokenlist_grow(papar_tokenlist *self, size_t amount)
   return 0;
 }
 
-void papar_lex(const char *d, papar_tokenlist *tokenlist) {
+void papar_lex(papar_tokenlist *tokenlist, const char *d) {
   const char *c = d;
   tokenlist->src = d;
 

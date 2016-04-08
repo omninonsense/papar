@@ -67,39 +67,39 @@ int papar__state_grow(papar_state *self, size_t amount)
 }
 
 /* [M, m] [Z, z] [L, l] [H, h] [V, v] [C, c] [S, s] [Q, q] [T, t] [A, a] */
-void papar_parse(const papar_tokenlist *tokenlist, papar_state *state)
+void papar_parse(papar_state *self, const papar_tokenlist *tokenlist)
 {
   char cmd;
-  if (papar__parser_expect(tokenlist, state, 0, 1, PAPAR_TOK_COMMAND)) return;
+  if (papar__parser_expect(self, tokenlist, 0, 1, PAPAR_TOK_COMMAND)) return;
 
-  cmd = *PAPAR_TOK_BEG(tokenlist, state, 0);
+  cmd = *PAPAR_TOK_BEG(self, tokenlist, 0);
 
-  ++state->position;
-  papar__parser_parse_command(tokenlist, state, cmd);
+  ++self->position;
+  papar__parser_parse_command(self, tokenlist, cmd);
 
-  while(!state->error_type) {
-    enum papar_token_type ct = papar__parser_peek(tokenlist, state, 0);
+  while(!self->error_type) {
+    enum papar_token_type ct = papar__parser_peek(self, tokenlist, 0);
     const char *ctname = papar_token_type_lookup[ct];
 
     PAPAR_DEBUG("Encountered token: %s", papar_token_type_lookup[ct]);
 
     switch (ct) {
       case PAPAR_TOK_COMMAND:
-        cmd =  *PAPAR_TOK_BEG(tokenlist, state, 0);
-        ++state->position;
-        papar__parser_parse_command(tokenlist, state, cmd);
+        cmd =  *PAPAR_TOK_BEG(self, tokenlist, 0);
+        ++self->position;
+        papar__parser_parse_command(self, tokenlist, cmd);
         continue;
       break;
 
       case PAPAR_TOK_NUMBER:
-        if (state->last_command == 'M')
-          papar__parser_parse_command(tokenlist, state, 'L');
-        else if (state->last_command == 'm')
-          papar__parser_parse_command(tokenlist, state, 'l');
-        else if (strchr("Zz", state->last_command))
-          papar__parser_expect(tokenlist, state, 0, 1, PAPAR_TOK_COMMAND);
+        if (self->last_command == 'M')
+          papar__parser_parse_command(self, tokenlist, 'L');
+        else if (self->last_command == 'm')
+          papar__parser_parse_command(self, tokenlist, 'l');
+        else if (strchr("Zz", self->last_command))
+          papar__parser_expect(self, tokenlist, 0, 1, PAPAR_TOK_COMMAND);
         else
-          papar__parser_parse_command(tokenlist, state, state->last_command);
+          papar__parser_parse_command(self, tokenlist, self->last_command);
 
         continue;
       break;
@@ -109,98 +109,98 @@ void papar_parse(const papar_tokenlist *tokenlist, papar_state *state)
       return;
 
       default:
-        PAPAR_ERROR("Unexpected token %s at position %zd", ctname, PAPAR_TOK_BEG(tokenlist, state, 0) - tokenlist->src);
-        state->error_type = PAPAR_ERR_PAR;
+        PAPAR_ERROR("Unexpected token %s at position %zd", ctname, PAPAR_TOK_BEG(self, tokenlist, 0) - tokenlist->src);
+        self->error_type = PAPAR_ERR_PAR;
         return;
       break;
     }
 
-    ++state->position;
+    ++self->position;
   }
 }
 
-void papar__parser_parse_command(const papar_tokenlist *tl, papar_state *s, char c)
+void papar__parser_parse_command(papar_state *self, const papar_tokenlist *tl, char c)
 {
   PAPAR_DEBUG("Processing command: %c", c);
-  s->last_command = c;
+  self->last_command = c;
   switch (c) {
     // Move to
     case 'M':
     case 'm':
-      papar__parser_parse_goto(tl, s);
+      papar__parser_parse_goto(self, tl);
     break;
 
     // Close path
     case 'Z':
     case 'z':
-      papar__parser_parse_closepath(tl, s);
+      papar__parser_parse_closepath(self, tl);
     break;
 
     // Line to
     case 'L':
     case 'l':
-      papar__parser_parse_lineto(tl, s);
+      papar__parser_parse_lineto(self, tl);
     break;
 
     // Horizontal line to
     case 'H':
     case 'h':
-      papar__parser_parse_horizontallineto(tl, s);
+      papar__parser_parse_horizontallineto(self, tl);
     break;
 
     // Vertival line to
     case 'V':
     case 'v':
-      papar__parser_parse_verticallineto(tl, s);
+      papar__parser_parse_verticallineto(self, tl);
     break;
 
     // Cubic Bézier
     case 'C':
     case 'c':
-      papar__parser_parse_3bezierto(tl, s);
+      papar__parser_parse_3bezierto(self, tl);
     break;
 
     // Smooth cubic Bézier
     case 'S':
     case 's':
-      papar__parser_parse_smooth3bezierto(tl, s);
+      papar__parser_parse_smooth3bezierto(self, tl);
     break;
 
     // Quadratic Bézier
     case 'Q':
     case 'q':
-      papar__parser_parse_2bezierto(tl, s);
+      papar__parser_parse_2bezierto(self, tl);
     break;
 
     // Smooth quadratic Bézier
     case 'T':
     case 't':
-      papar__parser_parse_smooth2bezierto(tl, s);
+      papar__parser_parse_smooth2bezierto(self, tl);
     break;
 
     // Elliptical arc
     // @NOTE: SVG 1.2 Tiny doesn't seem to support this
     case 'A':
     case 'a':
-      papar__parser_parse_ellipticalarc(tl, s);
+      papar__parser_parse_ellipticalarc(self, tl);
     break;
 
     default:
-      PAPAR_ERROR("Unknown command: %c at position %zd", c, PAPAR_TOK_BEG(tl, s, 0) - tl->src);
-      s->error_type = PAPAR_ERR_PAR;
+      PAPAR_ERROR("Unknown command: %c at position %zd", c, PAPAR_TOK_BEG(self, tl, 0) - tl->src);
+      self->error_type = PAPAR_ERR_PAR;
     break;
   }
 }
 
-enum papar_token_type papar__parser_peek(const papar_tokenlist *tl, papar_state *s, ssize_t offset)
+enum papar_token_type papar__parser_peek(papar_state *self, const papar_tokenlist *tl, ssize_t offset)
 {
-  if (tl->size <= s->position + offset)
+  if (tl->size <= self->position + offset)
     return PAPAR_TOK_EOF;
 
-  return PAPAR_TOK_TYPE(tl, s, offset);
+  return PAPAR_TOK_TYPE(self, tl, offset);
 }
 
-int papar__parser_expect(const papar_tokenlist *tl, papar_state *s, ssize_t offset, size_t count, ...)
+int papar__parser_expect(papar_state *self, const papar_tokenlist *tl, ssize_t offset, size_t count, ...)
 {
   va_list vargs;
   size_t i;
@@ -208,13 +208,13 @@ int papar__parser_expect(const papar_tokenlist *tl, papar_state *s, ssize_t offs
 
   va_start(vargs, count);
   for (i = 0; i < count; ++i) {
-    actual_type = papar__parser_peek(tl, s, offset+i);
+    actual_type = papar__parser_peek(self, tl, offset+i);
     expected_type = va_arg(vargs, enum papar_token_type);
 
     // Flags are marked as numbers by the lexer
     // So we do additional checking here.
     if (expected_type == PAPAR_TOK_FLAG && actual_type == PAPAR_TOK_NUMBER) {
-      if (PAPAR_TOK_LEN(tl, s, offset+i) != 1 && !(*PAPAR_TOK_BEG(tl, s, offset+i) == '0' || *PAPAR_TOK_BEG(tl, s, offset+i) == '1'))
+      if (PAPAR_TOK_LEN(self, tl, offset+i) != 1 && !(*PAPAR_TOK_BEG(self, tl, offset+i) == '0' || *PAPAR_TOK_BEG(self, tl, offset+i) == '1'))
         goto papar_unexpectedtokerr_jump;
     } else if (actual_type != expected_type)
       goto papar_unexpectedtokerr_jump;
@@ -224,147 +224,147 @@ int papar__parser_expect(const papar_tokenlist *tl, papar_state *s, ssize_t offs
 
 papar_unexpectedtokerr_jump:
   PAPAR_ERROR("Expected token type %s, but got %s (`%.*s`) at position %zd",
-    papar_token_type_lookup[expected_type],                         // %s
-    papar_token_type_lookup[actual_type],                           // %s
-    PAPAR_TOK_LEN(tl, s, offset+i), PAPAR_TOK_BEG(tl, s, offset+i), // %.*s
-    PAPAR_TOK_BEG(tl, s, offset+i) - tl->src                        // %zd
+    papar_token_type_lookup[expected_type],                              // %s
+    papar_token_type_lookup[actual_type],                                // %s
+    (int)PAPAR_TOK_LEN(self, tl, offset+i), PAPAR_TOK_BEG(self, tl, offset+i), // %.*s
+    PAPAR_TOK_BEG(self, tl, offset+i) - tl->src                             // %zd
   );
 
-  s->error_type = PAPAR_ERR_PAR;
+  self->error_type = PAPAR_ERR_PAR;
   return 1;
 }
 
-void papar__parser_parse_goto(const papar_tokenlist *tl, papar_state *s)
+void papar__parser_parse_goto(papar_state *self, const papar_tokenlist *tl)
 {
   papar_command cmd = {0};
-  cmd.type = s->last_command;
+  cmd.type = self->last_command;
 
-  papar__parser_consume_point(tl, s, &cmd.x, &cmd.y);
-  papar_state_push(s, cmd);
+  papar__parser_consume_point(self, tl, &cmd.x, &cmd.y);
+  papar_state_push(self, cmd);
 }
 
-void papar__parser_parse_closepath(const papar_tokenlist *tl, papar_state *s)
+void papar__parser_parse_closepath(papar_state *self, const papar_tokenlist *tl)
 {
   papar_command cmd = {0};
-  cmd.type = s->last_command;
+  cmd.type = self->last_command;
 
-  papar_state_push(s, cmd);
+  papar_state_push(self, cmd);
 }
 
-void papar__parser_parse_lineto(const papar_tokenlist *tl, papar_state *s)
+void papar__parser_parse_lineto(papar_state *self, const papar_tokenlist *tl)
 {
   papar_command cmd = {0};
-  cmd.type = s->last_command;
+  cmd.type = self->last_command;
 
-  papar__parser_consume_point(tl, s, &cmd.x, &cmd.y);
-  papar_state_push(s, cmd);
+  papar__parser_consume_point(self, tl, &cmd.x, &cmd.y);
+  papar_state_push(self, cmd);
 }
 
-void papar__parser_parse_horizontallineto(const papar_tokenlist *tl, papar_state *s)
+void papar__parser_parse_horizontallineto(papar_state *self, const papar_tokenlist *tl)
 {
   papar_command cmd = {0};
-  cmd.type = s->last_command;
+  cmd.type = self->last_command;
 
-  papar__parser_consume_number(tl, s, &cmd.x);
-  papar_state_push(s, cmd);
+  papar__parser_consume_number(self, tl, &cmd.x);
+  papar_state_push(self, cmd);
 }
 
-void papar__parser_parse_verticallineto(const papar_tokenlist *tl, papar_state *s)
+void papar__parser_parse_verticallineto(papar_state *self, const papar_tokenlist *tl)
 {
   papar_command cmd = {0};
-  cmd.type = s->last_command;
+  cmd.type = self->last_command;
 
-  papar__parser_consume_number(tl, s, &cmd.y);
-  papar_state_push(s, cmd);
+  papar__parser_consume_number(self, tl, &cmd.y);
+  papar_state_push(self, cmd);
 }
 
-void papar__parser_parse_3bezierto(const papar_tokenlist *tl, papar_state *s)
+void papar__parser_parse_3bezierto(papar_state *self, const papar_tokenlist *tl)
 {
   papar_command cmd = {0};
-  cmd.type = s->last_command;
+  cmd.type = self->last_command;
 
-  papar__parser_consume_point(tl, s, &cmd.x1, &cmd.y1);
-  papar__parser_consume_point(tl, s, &cmd.x2, &cmd.y2);
-  papar__parser_consume_point(tl, s, &cmd.x, &cmd.y);
-  papar_state_push(s, cmd);
+  papar__parser_consume_point(self, tl, &cmd.x1, &cmd.y1);
+  papar__parser_consume_point(self, tl, &cmd.x2, &cmd.y2);
+  papar__parser_consume_point(self, tl, &cmd.x, &cmd.y);
+  papar_state_push(self, cmd);
 }
 
-void papar__parser_parse_smooth3bezierto(const papar_tokenlist *tl, papar_state *s)
+void papar__parser_parse_smooth3bezierto(papar_state *self, const papar_tokenlist *tl)
 {
   papar_command cmd = {0};
-  cmd.type = s->last_command;
+  cmd.type = self->last_command;
 
-  papar__parser_consume_point(tl, s, &cmd.x2, &cmd.y2);
-  papar__parser_consume_point(tl, s, &cmd.x, &cmd.y);
-  papar_state_push(s, cmd);
+  papar__parser_consume_point(self, tl, &cmd.x2, &cmd.y2);
+  papar__parser_consume_point(self, tl, &cmd.x, &cmd.y);
+  papar_state_push(self, cmd);
 }
 
-void papar__parser_parse_2bezierto(const papar_tokenlist *tl, papar_state *s)
+void papar__parser_parse_2bezierto(papar_state *self, const papar_tokenlist *tl)
 {
   papar_command cmd = {0};
-  cmd.type = s->last_command;
+  cmd.type = self->last_command;
 
-  papar__parser_consume_point(tl, s, &cmd.x1, &cmd.y1);
-  papar__parser_consume_point(tl, s, &cmd.x, &cmd.y);
-  papar_state_push(s, cmd);
+  papar__parser_consume_point(self, tl, &cmd.x1, &cmd.y1);
+  papar__parser_consume_point(self, tl, &cmd.x, &cmd.y);
+  papar_state_push(self, cmd);
 }
 
-void papar__parser_parse_smooth2bezierto(const papar_tokenlist *tl, papar_state *s)
+void papar__parser_parse_smooth2bezierto(papar_state *self, const papar_tokenlist *tl)
 {
   papar_command cmd = {0};
-  cmd.type = s->last_command;
+  cmd.type = self->last_command;
 
-  papar__parser_consume_point(tl, s, &cmd.x, &cmd.y);
-  papar_state_push(s, cmd);
+  papar__parser_consume_point(self, tl, &cmd.x, &cmd.y);
+  papar_state_push(self, cmd);
 }
 
-void papar__parser_parse_ellipticalarc(const papar_tokenlist *tl, papar_state *s)
+void papar__parser_parse_ellipticalarc(papar_state *self, const papar_tokenlist *tl)
 {
   papar_command cmd = {0};
   bool large_arc = false, sweep = false;
-  cmd.type = s->last_command;
+  cmd.type = self->last_command;
 
-  papar__parser_consume_point(tl, s, &cmd.x1, &cmd.y1); // rx, ry
-  papar__parser_consume_number(tl, s, &cmd.x2);         // x-axis-rotation
+  papar__parser_consume_point(self, tl, &cmd.x1, &cmd.y1); // rx, ry
+  papar__parser_consume_number(self, tl, &cmd.x2);         // x-axis-rotation
 
-  papar__parser_consume_flag(tl, s, &large_arc);
-  papar__parser_consume_flag(tl, s, &sweep);
+  papar__parser_consume_flag(self, tl, &large_arc);
+  papar__parser_consume_flag(self, tl, &sweep);
 
   if (large_arc) cmd.flags |= PAPAR_LARGE_ARC_FLAG;
   if (sweep)     cmd.flags |= PAPAR_SWEEP_FLAG;
 
-  papar__parser_consume_point(tl, s, &cmd.x, &cmd.y);
+  papar__parser_consume_point(self, tl, &cmd.x, &cmd.y);
 
-  papar_state_push(s, cmd);
+  papar_state_push(self, cmd);
 }
 
-void papar__parser_consume_number(const papar_tokenlist *tl, papar_state *s, double *number)
+void papar__parser_consume_number(papar_state *self, const papar_tokenlist *tl, double *number)
 {
-  if (papar__parser_expect(tl, s, 0, 1, PAPAR_TOK_NUMBER)) return;
+  if (papar__parser_expect(self, tl, 0, 1, PAPAR_TOK_NUMBER)) return;
 
-  *number = strtod(PAPAR_TOK_BEG(tl, s, 0), NULL);
+  *number = strtod(PAPAR_TOK_BEG(self, tl, 0), NULL);
 
-  ++s->position;
+  ++self->position;
 }
 
-void papar__parser_consume_flag(const papar_tokenlist *tl, papar_state *s, bool *flag)
+void papar__parser_consume_flag(papar_state *self, const papar_tokenlist *tl, bool *flag)
 {
 
-  if (papar__parser_expect(tl, s, 0, 1, PAPAR_TOK_FLAG)) return;
+  if (papar__parser_expect(self, tl, 0, 1, PAPAR_TOK_FLAG)) return;
 
-  *flag = (*PAPAR_TOK_BEG(tl, s, 0) == '1');
+  *flag = (*PAPAR_TOK_BEG(self, tl, 0) == '1');
 
-  ++s->position;
+  ++self->position;
 }
 
-void papar__parser_consume_point(const papar_tokenlist *tl, papar_state *s, double *x, double *y)
+void papar__parser_consume_point(papar_state *self, const papar_tokenlist *tl, double *x, double *y)
 {
-  if (papar__parser_expect(tl, s, 0, 3, PAPAR_TOK_NUMBER, PAPAR_TOK_COMMA, PAPAR_TOK_NUMBER)) return;
+  if (papar__parser_expect(self, tl, 0, 3, PAPAR_TOK_NUMBER, PAPAR_TOK_COMMA, PAPAR_TOK_NUMBER)) return;
 
   //@IDEA: Maybe check how much characters strtod() consumed
   //       to double-check if the lexer read the number properly?
-  *x = strtod(PAPAR_TOK_BEG(tl, s, 0), NULL);
-  *y = strtod(PAPAR_TOK_BEG(tl, s, 2), NULL);
+  *x = strtod(PAPAR_TOK_BEG(self, tl, 0), NULL);
+  *y = strtod(PAPAR_TOK_BEG(self, tl, 2), NULL);
 
-  s->position += 3;
+  self->position += 3;
 }

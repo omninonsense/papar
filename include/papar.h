@@ -48,11 +48,11 @@
 #define PAPAR_PRINT_ERROR 1
 #endif
 
-#define PAPAR_TOK(tl, s, offs) (tl->tokens[s->position+offs])
-#define PAPAR_TOK_BEG(tl, s, offs) (tl->tokens[s->position+offs].start)
-#define PAPAR_TOK_LEN(tl, s, offs) (tl->tokens[s->position+offs].length)
-#define PAPAR_TOK_END(tl, s, offs) (tl->tokens[s->position+offs].start + PAPAR_TOK_LEN(tl, s, offs))
-#define PAPAR_TOK_TYPE(tl, s, offs) (tl->tokens[s->position+offs].type)
+#define PAPAR_TOK(s, tl, offs) (tl->tokens[s->position+offs])
+#define PAPAR_TOK_BEG(s, tl, offs) (tl->tokens[s->position+offs].start)
+#define PAPAR_TOK_LEN(s, tl, offs) (tl->tokens[s->position+offs].length)
+#define PAPAR_TOK_END(s, tl, offs) (tl->tokens[s->position+offs].start + PAPAR_TOK_LEN(tl, s, offs))
+#define PAPAR_TOK_TYPE(s, tl, offs) (tl->tokens[s->position+offs].type)
 
 #define PAPAR_DEBUG(fmt, ...)                                                                      \
   do {                                                                                             \
@@ -76,6 +76,7 @@
 #include <stdio.h>
 #endif
 
+#include <sys/types.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -155,8 +156,8 @@ typedef struct papar_state {
   size_t capacity;
 } papar_state;
 
-void papar_lex(const char *d, papar_tokenlist *tokenlist);
-void papar_parse(const papar_tokenlist *tokenlist, papar_state *state);
+void papar_lex(papar_tokenlist *tokenlist, const char *d);
+void papar_parse(papar_state *state, const papar_tokenlist *tokenlist);
 
 papar_state *papar_state_new(size_t initial_capacity);
 void papar_state_free(papar_state *self);
@@ -165,24 +166,24 @@ papar_command *papar_state_pop(papar_state *self);
 
 int papar__state_grow(papar_state *self, size_t amount);
 
-enum papar_token_type papar__parser_peek(const papar_tokenlist *tl, papar_state *s, ssize_t offset);
-int papar__parser_expect(const papar_tokenlist *tl, papar_state *s, ssize_t offset, size_t count, ...);
+enum papar_token_type papar__parser_peek(papar_state *self, const papar_tokenlist *tl, ssize_t offset);
+int papar__parser_expect(papar_state *self, const papar_tokenlist *tl, ssize_t offset, size_t count, ...);
 
-void papar__parser_consume_number(const papar_tokenlist *tl, papar_state *s, double *number);
-void papar__parser_consume_point(const papar_tokenlist *tl, papar_state *s, double *x, double *y);
-void papar__parser_consume_flag(const papar_tokenlist *tl, papar_state *s, bool *flag);
+void papar__parser_consume_number(papar_state *self, const papar_tokenlist *tl, double *number);
+void papar__parser_consume_point(papar_state *self, const papar_tokenlist *tl, double *x, double *y);
+void papar__parser_consume_flag(papar_state *self, const papar_tokenlist *tl, bool *flag);
 
-void papar__parser_parse_command(const papar_tokenlist *tl, papar_state *s, char c);
-void papar__parser_parse_goto(const papar_tokenlist *tl, papar_state *s);
-void papar__parser_parse_closepath(const papar_tokenlist *tl, papar_state *s);
-void papar__parser_parse_lineto(const papar_tokenlist *tl, papar_state *s);
-void papar__parser_parse_horizontallineto(const papar_tokenlist *tl, papar_state *s);
-void papar__parser_parse_verticallineto(const papar_tokenlist *tl, papar_state *s);
-void papar__parser_parse_3bezierto(const papar_tokenlist *tl, papar_state *s);
-void papar__parser_parse_smooth3bezierto(const papar_tokenlist *tl, papar_state *s);
-void papar__parser_parse_2bezierto(const papar_tokenlist *tl, papar_state *s);
-void papar__parser_parse_smooth2bezierto(const papar_tokenlist *tl, papar_state *s);
-void papar__parser_parse_ellipticalarc(const papar_tokenlist *tl, papar_state *s);
+void papar__parser_parse_command(papar_state *self, const papar_tokenlist *tl, char c);
+void papar__parser_parse_goto(papar_state *self, const papar_tokenlist *tl);
+void papar__parser_parse_closepath(papar_state *self, const papar_tokenlist *tl);
+void papar__parser_parse_lineto(papar_state *self, const papar_tokenlist *tl);
+void papar__parser_parse_horizontallineto(papar_state *self, const papar_tokenlist *tl);
+void papar__parser_parse_verticallineto(papar_state *self, const papar_tokenlist *tl);
+void papar__parser_parse_3bezierto(papar_state *self, const papar_tokenlist *tl);
+void papar__parser_parse_smooth3bezierto(papar_state *self, const papar_tokenlist *tl);
+void papar__parser_parse_2bezierto(papar_state *self, const papar_tokenlist *tl);
+void papar__parser_parse_smooth2bezierto(papar_state *self, const papar_tokenlist *tl);
+void papar__parser_parse_ellipticalarc(papar_state *self, const papar_tokenlist *tl);
 
 papar_token papar_token_new(const char* start, size_t length, enum papar_token_type type);
 
