@@ -6,6 +6,8 @@ CC=gcc
 STD=c11
 SOVERSION=1
 
+export LD_LIBRARY_PATH=$(build_dir)
+
 prepare: dir_structure libpapar
 
 build: prepare build_msg $(patsubst %.c, %.out, $(wildcard *.c))
@@ -24,7 +26,7 @@ libpapar:
 	@echo " "
 	@echo "Compiling libpapar.so"
 	$(CC) -shared -Wl,-soname,libpapar.so.$(SOVERSION) -o $(build_dir)/libpapar.so -std=$(STD) $(CFLAGS) -Wall -fPIC ../lexer.c ../parser.c
-	@rm $(build_dir)/libpapar.so.$(SOVERSION)
+	@rm -f $(build_dir)/libpapar.so.$(SOVERSION)
 	@ln -s libpapar.so $(build_dir)/libpapar.so.$(SOVERSION)
 
 clean:
