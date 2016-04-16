@@ -2,6 +2,9 @@
 #define __TEST_H__
 
 #include <stdio.h>
+#include <stdarg.h>
+#include <float.h>
+#include <math.h>
 
 #define BASH_RED   "\e[0;31m"
 #define BASH_GREEN "\e[0;32m"
@@ -37,6 +40,49 @@ bool token_assert(const papar_token token, enum papar_token_type type, const cha
 
   printf(".");
   return true;
+}
+
+bool dblcmp(double a, double b)
+{
+  if (fabs(a - b) >= DBL_EPSILON) {
+    printf("x");
+    fprintf(stderr, "expected `%f`, got: `%f`\n", a, b);
+    return  false;
+  }
+
+  return true;
+}
+
+bool cmd_assert(const papar_command cmd, char type, ...)
+{
+  va_list vargs;
+
+  if (cmd.type != type) {
+    printf("x");
+    fprintf(stderr, "expected `%c`, got: `%c`\n", type, cmd.type);
+    return false;
+  }
+
+  va_start(vargs, type);
+
+  switch (type) {
+    case 'm':
+    case 'M':
+    case 'l':
+    case 'L':
+      if (!dblcmp(cmd.x, va_arg(vargs, double))) goto assert_fail;
+      if (!dblcmp(cmd.y, va_arg(vargs, double))) goto assert_fail;
+    break;
+  }
+
+  printf(".");
+  va_end(vargs);
+  return true;
+
+assert_fail:
+  va_end(vargs);
+  return false;
+
 }
 
 #endif
