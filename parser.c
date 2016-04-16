@@ -220,6 +220,7 @@ int papar__parser_expect(papar_state *self, const papar_tokenlist *tl, ssize_t o
       goto papar_unexpectedtokerr_jump;
   }
 
+  va_end(vargs);
   return 0;
 
 papar_unexpectedtokerr_jump:
@@ -231,6 +232,7 @@ papar_unexpectedtokerr_jump:
   );
 
   self->error_type = PAPAR_ERR_PAR;
+  va_end(vargs);
   return 1;
 }
 
